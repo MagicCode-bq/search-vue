@@ -1,17 +1,21 @@
 <template>
-    <div class="manage-div">
+    <div  v-loading="loadingStart"
+          :element-loading-text="loadtext"
+          element-loading-spinner="el-icon-loading"
+          element-loading-background="rgba(0, 0, 0, 0.8)"
+            class="manage-div">
       <!--标题-->
       <div class="heardTitle">
           <div class="flush">
             <el-button type="primary"  @click="initTable(pageIndex,10)" size="mini" icon="el-icon-refresh" circle></el-button>
           </div>
           <div class="buttons">
-            <el-button type="danger" size="mini" round>删除索引库</el-button>
-            <el-button type="warning" size="mini" round>重构索引库</el-button>
+            <el-button type="danger"  @click="deleteIndex" size="mini" round>删除索引库</el-button>
+            <el-button type="warning" @click="createIndex"   size="mini" round>重构索引库</el-button>
           </div>
       </div>
-      <!--表单-->
       <div class="content">
+        <!--表单-->
         <div class="table-div">
           <el-table
                   :data="tableData"
@@ -62,8 +66,25 @@
                   :total="page.total">
           </el-pagination>
         </div>
+        <!--热词、远程词典-->
         <div class="operation">
-          内容
+          <div  class="hotWord">
+            <h3>热词：搜索次数大于6次的搜索词显示</h3>
+            <el-tag type="danger" class="elTag" v-for="item in hotWord">{{item}}</el-tag>
+          </div>
+          <div class="dictionaries">
+            <h3>ES远程词典内容</h3>
+            <dic class="dic-input">
+              <el-input v-model="dicContent"  style="width: 200px"/>
+              <el-button type="primary"  @click="insertDic" style="margin-left: 10px" size="small">添加词汇</el-button>
+            </dic>
+            <el-tag class="dic-tab"
+                    v-for="tag in Dic"
+                    :key="tag"
+                    closable>
+              {{tag}}
+            </el-tag>
+          </div>
         </div>
       </div>
       <!--弹窗-->
@@ -111,6 +132,8 @@
 
 <script>
   import {requestTableData,requestCategory,savePoem,deletePoemById} from 'network/manage'
+  import {createIndex,deleteIndex,getHotWord} from 'network/esearch'
+  import {getDic,addDic,deleteDic} from 'network/dic'
 
   export default {
     name: "manage",
@@ -127,12 +150,19 @@
            pages:0,//总页数
           isFirstPage:'',
           isLastPage:'',
-        }
+        },
+        loadingStart:false,
+        loadtext:'',
+        hotWord:[],
+        Dic:[],  //词典
+        dicContent:""
       }
     },
     created() {
       this.initTable();
       this.getCategory();
+      this.requestHotWord();
+      this.requestDic()
     },
     methods: {
       initTable(num=1,size=10) {
@@ -195,14 +225,73 @@
       pageNum(num){
         this.pageIndex=num;
        this.initTable(num,10)
+      },
+      deleteIndex(){
+        this.$confirm('此操作将永久清空索引库, 是否继续?', '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }).then(() => {
+          this.loadingStart=true
+          this.loadtext='清除索引库中，请稍等'
+          deleteIndex().then(res=>{
+            this.$message.success(res)
+            this.loadingStart=false
+          })
+        }).catch(() => {
+          this.$message({
+            type: 'info',
+            message: '已取消删除'
+          });
+        });
+      },
+      createIndex(){
+        this.$confirm('此操作将重构索引库, 是否继续?', '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }).then(() => {
+          this.loadingStart=true
+          this.loadtext='重构索引库中，请稍等'
+          createIndex().then(res=>{
+            this.$message.success(res)
+            this.loadingStart=false
+          })
+        }).catch(() => {
+          this.$message({
+            type: 'info',
+            message: '已取消重构'
+          });
+        });
+      },
+      requestHotWord(){
+        getHotWord().then(res=>{
+          this.hotWord=res;
+        })
+      },
+      requestDic(){
+         getDic().then(res=>{
+           this.Dic=res;
+         })
+      },
+      insertDic(){
+        let tent= this.dicContent;
+         addDic(tent).then(res=>{
+           console.log(res)
+         })
       }
     }
   }
 </script>
 
 <style scoped>
+
+  .loadClass{
+    disabled:true
+  }
   .manage-div{
      width: 100%;
+    height: 600px;
   }
   .heardTitle{
      line-height: 40px;
@@ -223,19 +312,40 @@
   .content{
     width: 100%;
     display: flex;
+    height: 600px;
   }
   .table-div{
     width: 500px;
     flex: 3;
     text-align: center;
   }
-  .operation{
-    flex: 1;
-    background-color: #009999;
-    width: 200px;
-  }
   el-table-column{
     height: 50px;
   }
+  .operation{
+    flex: 1;
+    width: 200px;
+  }
+  .hotWord{
+    width: 100%;
+    height: 300px;
+    background-color: #ff8198;
+  }
+  .dictionaries{
+    width: 100%;
+    height: 300px;
+    background-color:skyblue;
+  }
+  .elTag{
+    margin: 10px;
+  }
+  .dic-input{
+    display: flex;
+  }
+  .dic-tab{
+   margin: 5px;
+  }
+
+
 
 </style>

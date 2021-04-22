@@ -58,5 +58,6 @@ export default {
   .el-main {
     color: #333;
     padding: 0;
+    height: 800px;
   }
 </style>
